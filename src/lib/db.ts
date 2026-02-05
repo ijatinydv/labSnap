@@ -5,13 +5,7 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const db =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    // Prisma 7: Pass the database URL directly to the constructor
-    adapter: undefined, // Using direct connection, not Accelerate
-    datasourceUrl: process.env.DATABASE_URL,
-  });
+export const db = globalForPrisma.prisma ?? new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = db;

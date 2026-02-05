@@ -14,17 +14,17 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
-  // 2. Get user from database
-  const user = await db.user.findUnique({
+  // 2. Get or create user in database (upsert)
+  const user = await db.user.upsert({
     where: { clerkId: userId },
+    update: {}, // Do nothing if exists
+    create: {
+      clerkId: userId,
+      email: `${userId}@clerk.user`,
+      credits: 5,
+    },
     select: { id: true, credits: true },
   });
-
-  // If user doesn't exist in our DB yet, redirect to home
-  // They need to save at least one experiment first
-  if (!user) {
-    redirect("/");
-  }
 
   // 3. Fetch all experiments for this user
   const experiments = await db.experiment.findMany({

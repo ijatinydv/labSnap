@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { FileText, Github } from "lucide-react";
 import {
@@ -7,7 +6,7 @@ import {
   SignedOut,
   UserButton,
 } from "@clerk/nextjs";
-import { CreditsBadge, CreditsBadgeSkeleton } from "@/components/CreditsBadge";
+import { CreditsBadge } from "@/components/CreditsBadge";
 
 export function Navbar() {
   return (
@@ -47,11 +46,7 @@ export function Navbar() {
 
           {/* Auth: User section (when logged in) */}
           <SignedIn>
-            {/* Credits Badge - wrapped in Suspense to not block navbar */}
-            <Suspense fallback={<CreditsBadgeSkeleton />}>
-              <CreditsBadge />
-            </Suspense>
-
+            <CreditsBadge />
             <Link
               href="/dashboard"
               className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-2 text-sm font-medium text-zinc-300 transition-all duration-200 hover:border-violet-700 hover:bg-violet-950/50 hover:text-white"
