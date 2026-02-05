@@ -98,6 +98,24 @@ export async function generateLabRecord(data: LabData): Promise<void> {
   const children: Paragraph[] = [];
 
   // Section A: Header (Always Present)
+  // Date at top-left without bold
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `Date: ${date}`,
+          font: "Times New Roman",
+          size: 24, // 12pt
+        }),
+      ],
+      alignment: AlignmentType.LEFT,
+    })
+  );
+
+  // Blank line
+  children.push(new Paragraph({ children: [] }));
+
+  // Experiment No - Centered with larger font
   children.push(
     new Paragraph({
       children: [
@@ -105,22 +123,10 @@ export async function generateLabRecord(data: LabData): Promise<void> {
           text: `Experiment No: ${expNo}`,
           bold: true,
           font: "Times New Roman",
-          size: 24,
+          size: 36, // 18pt for emphasis
         }),
       ],
-    })
-  );
-
-  children.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: `Date: ${date}`,
-          bold: true,
-          font: "Times New Roman",
-          size: 24,
-        }),
-      ],
+      alignment: AlignmentType.CENTER,
       spacing: { after: 240 },
     })
   );
