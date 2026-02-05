@@ -62,11 +62,14 @@ Strict Constraints:
 -- Name: ${name}
 -- Enrollment No.: ${rollNo}
 
-**Output:** Generate a text block representing the query result. Use strict ASCII table formatting (using +, -, |) to look exactly like MariaDB/MySQL.
+**Output:** The output_text MUST start with these two lines:
+Name: ${name}
+Enrollment No.: ${rollNo}
+Then show the query result using strict ASCII table formatting (using +, -, |) to look exactly like MariaDB/MySQL.
 
 **Theory/Syntax:** Provide a short theory (2 lines) and the generic syntax for the command.
 
-Return JSON: { "type": "dbms", "theory": "...", "syntax": "...", "code": "-- Name: ${name}\\n-- Enrollment No.: ${rollNo}\\n...", "output_text": "..." }`,
+Return JSON: { "type": "dbms", "theory": "...", "syntax": "...", "code": "-- Name: ${name}\\n-- Enrollment No.: ${rollNo}\\n...", "output_text": "Name: ${name}\\nEnrollment No.: ${rollNo}\\n\\n+---...---+\\n..." }`,
       },
     ];
   } else {
