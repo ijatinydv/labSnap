@@ -1,17 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { toBlob } from "html-to-image";
-import { useAuth } from "@clerk/nextjs";
+import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { LabForm, LabFormData } from "@/components/LabForm";
-import { FakeTerminal } from "@/components/FakeTerminal";
-import { generateLabRecord, LabData } from "@/lib/generateDoc";
-import { Loader2, FileDown, ArrowLeft, Sparkles, Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Sparkles, Upload, Cloud, Droplets, Zap, FileText } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -20,380 +12,166 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-interface APIResult {
-  type: "dbms" | "coding";
-  theory?: string;
-  syntax?: string;
-  code: string;
-  output_text: string;
-}
-
 export default function Home() {
-  // Auth state
-  const { isSignedIn } = useAuth();
-
-  // State management
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [result, setResult] = useState<APIResult | null>(null);
-  const [formData, setFormData] = useState<LabFormData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // Editable fields (so users can modify AI output)
-  const [editableTheory, setEditableTheory] = useState("");
-  const [editableSyntax, setEditableSyntax] = useState("");
-  const [editableCode, setEditableCode] = useState("");
-  const [editableOutput, setEditableOutput] = useState("");
-
-  // Step 1: Handle form submission
-  const handleFormSubmit = async (data: LabFormData) => {
-    setLoading(true);
-    setError(null);
-    setFormData(data);
-
-    try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          aim: data.aim,
-          subject: data.subject,
-          name: data.name,
-          rollNo: data.rollNo,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate content");
-      }
-
-      const apiResult: APIResult = await response.json();
-      setResult(apiResult);
-
-      // Initialize editable fields with API response
-      setEditableTheory(apiResult.theory || "");
-      setEditableSyntax(apiResult.syntax || "");
-      setEditableCode(apiResult.code);
-      setEditableOutput(apiResult.output_text);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-      setResult(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Step 4: Handle download
-  const handleDownload = async () => {
-    if (!result || !formData) return;
-
-    setLoading(true);
-
-    try {
-      // Capture the terminal preview using html-to-image
-      const terminalElement = document.getElementById("terminal-preview");
-      let screenshotBlob: Blob | null = null;
-
-      if (terminalElement) {
-        try {
-          screenshotBlob = await toBlob(terminalElement, {
-            backgroundColor: "#ffffff",
-            quality: 0.95,
-            pixelRatio: 2,
-          });
-        } catch (captureError) {
-          console.error("Screenshot capture failed:", captureError);
-          alert("Failed to capture output screenshot. The document will be generated without it.");
-        }
-      }
-
-      if (!screenshotBlob) {
-        console.warn("Screenshot blob is null, continuing without screenshot");
-      }
-
-      // Prepare data with EDITED content
-      const labData: LabData = {
-        expNo: formData.expNo,
-        date: formData.date,
-        aim: formData.aim,
-        subject: formData.subject,
-        name: formData.name,
-        rollNo: formData.rollNo,
-        theory: result.type === "dbms" ? editableTheory : undefined,
-        syntax: result.type === "dbms" ? editableSyntax : undefined,
-        code: editableCode,
-        screenshotBlob,
-      };
-
-      await generateLabRecord(labData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate document");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Back button handler
-  const handleBack = () => {
-    setResult(null);
-    setError(null);
-  };
-
-  // Save to Dashboard handler
-  const handleSave = async () => {
-    if (!result || !formData) return;
-
-    setSaving(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/experiments/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          aim: formData.aim,
-          subject: formData.subject,
-          code: editableCode,
-          output_text: editableOutput,
-          theory: result.type === "dbms" ? editableTheory : undefined,
-          syntax: result.type === "dbms" ? editableSyntax : undefined,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to save experiment");
-      }
-
-      alert(`✅ ${data.message}\nCredits remaining: ${data.creditsRemaining}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save experiment");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950">
       <Navbar />
 
-      <main className="flex flex-1 flex-col items-center px-4 py-12">
+      <main className="flex flex-1 flex-col">
         {/* Hero Section */}
-        <div className="mb-10 text-center">
-          <h1 className="mb-3 bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl">
-            Generate Lab Records
-          </h1>
-          <p className="mx-auto max-w-md text-lg text-zinc-400">
-            Create print-ready Word documents that match your college&apos;s format in seconds.
-          </p>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="mb-6 w-full max-w-5xl rounded-lg border border-red-800 bg-red-950/50 p-4 text-red-300">
-            <p className="font-medium">Error: {error}</p>
+        <section className="relative overflow-hidden px-4 py-20 sm:py-28">
+          {/* Background gradient effects */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute left-1/2 top-0 h-[500px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-600/20 blur-[100px]" />
+            <div className="absolute right-0 top-1/2 h-[400px] w-[400px] rounded-full bg-indigo-600/15 blur-[80px]" />
           </div>
-        )}
 
-        {/* Step 1: Show Form */}
-        {!result && <LabForm onSubmit={handleFormSubmit} />}
-
-        {/* Step 2 & 3: Preview Dashboard */}
-        {result && formData && (
-          <div className="w-full max-w-6xl space-y-6">
-            {/* Header with Actions */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <Button
-                onClick={handleBack}
-                variant="outline"
-                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Form
-              </Button>
-
-              <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1.5 rounded-full bg-emerald-950 px-3 py-1 text-sm text-emerald-400">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  AI Generated
-                </span>
-                {isSignedIn && (
-                  <Button
-                    onClick={handleSave}
-                    disabled={saving}
-                    variant="outline"
-                    className="border-emerald-700 text-emerald-400 hover:bg-emerald-950 hover:text-emerald-300"
-                  >
-                    {saving ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="mr-2 h-4 w-4" />
-                    )}
-                    Save to Dashboard
-                  </Button>
-                )}
-                <Button
-                  onClick={handleDownload}
-                  disabled={loading}
-                  className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-500 hover:to-indigo-500"
-                >
-                  {loading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileDown className="mr-2 h-4 w-4" />
-                  )}
-                  Download Word File
-                </Button>
+          <div className="relative mx-auto max-w-4xl text-center">
+            {/* Logo Badge */}
+            <div className="mb-8 inline-flex items-center gap-2.5 rounded-full border border-zinc-800 bg-zinc-900/80 px-4 py-2 backdrop-blur-sm">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
+                <FileText className="h-4 w-4 text-white" />
               </div>
+              <span className="bg-gradient-to-r from-white to-zinc-300 bg-clip-text font-semibold text-transparent">
+                LabSnap
+              </span>
             </div>
 
-            {/* Two Column Layout */}
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Left Column: Editable Fields */}
-              <div className="space-y-4">
-                <Card className="border-zinc-800 bg-zinc-900/50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg text-white">
-                      Edit Content
+            {/* Hero Headline */}
+            <h1 className="mb-6 bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-5xl font-bold tracking-tight text-transparent sm:text-6xl lg:text-7xl">
+              Lab Records in Seconds,
+              <br />
+              <span className="bg-gradient-to-r from-violet-400 via-indigo-400 to-purple-400 bg-clip-text">
+                Not Hours.
+              </span>
+            </h1>
+
+            {/* Subtext */}
+            <p className="mx-auto mb-12 max-w-xl text-lg text-zinc-400 sm:text-xl">
+              The AI-powered copilot for MAIT Engineers. Generate perfect lab
+              documentation with a single click.
+            </p>
+          </div>
+        </section>
+
+        {/* Feature Selector Section */}
+        <section className="relative px-4 pb-20">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="mb-3 text-center text-sm font-medium uppercase tracking-widest text-zinc-500">
+              Choose Your Tool
+            </h2>
+            <p className="mb-10 text-center text-lg text-zinc-400">
+              Select the workflow that fits your needs
+            </p>
+
+            {/* Feature Cards Grid */}
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Card 1: AI Auto-Writer */}
+              <Link href="/generate" className="group">
+                <Card className="relative h-full cursor-pointer overflow-hidden border-zinc-800 bg-zinc-900/50 transition-all duration-300 hover:border-violet-600/50 hover:bg-zinc-900/80 hover:shadow-lg hover:shadow-violet-600/10">
+                  {/* Gradient overlay on hover */}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-violet-600/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                  <CardHeader className="relative pb-4">
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-600/25">
+                      <Sparkles className="h-7 w-7 text-white" />
+                    </div>
+                    <CardTitle className="text-xl text-white transition-colors group-hover:text-violet-300">
+                      AI Auto-Writer
                     </CardTitle>
-                    <CardDescription className="text-zinc-400">
-                      Modify the AI-generated content before downloading.
+                    <CardDescription className="text-base text-zinc-400">
+                      I have the Aim. Generate Code, Output & Theory for me.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Theory (DBMS only) */}
-                    {result.type === "dbms" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="theory" className="text-zinc-300">
-                          Theory
-                        </Label>
-                        <Textarea
-                          id="theory"
-                          value={editableTheory}
-                          onChange={(e) => setEditableTheory(e.target.value)}
-                          className="min-h-[80px] border-zinc-700 bg-zinc-800/50 text-white"
-                        />
-                      </div>
-                    )}
 
-                    {/* Syntax (DBMS only) */}
-                    {result.type === "dbms" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="syntax" className="text-zinc-300">
-                          Syntax
-                        </Label>
-                        <Textarea
-                          id="syntax"
-                          value={editableSyntax}
-                          onChange={(e) => setEditableSyntax(e.target.value)}
-                          className="min-h-[80px] border-zinc-700 bg-zinc-800/50 font-mono text-sm text-white"
-                        />
-                      </div>
-                    )}
-
-                    {/* Code */}
-                    <div className="space-y-2">
-                      <Label htmlFor="code" className="text-zinc-300">
-                        Source Code
-                      </Label>
-                      <Textarea
-                        id="code"
-                        value={editableCode}
-                        onChange={(e) => setEditableCode(e.target.value)}
-                        className="min-h-[150px] border-zinc-700 bg-zinc-800/50 font-mono text-sm text-white"
-                      />
-                    </div>
-
-                    {/* Output Text */}
-                    <div className="space-y-2">
-                      <Label htmlFor="output" className="text-zinc-300">
-                        Output Text
-                      </Label>
-                      <Textarea
-                        id="output"
-                        value={editableOutput}
-                        onChange={(e) => setEditableOutput(e.target.value)}
-                        className="min-h-[100px] border-zinc-700 bg-zinc-800/50 font-mono text-sm text-white"
-                      />
+                  <CardContent className="relative">
+                    <div className="flex items-center gap-2 text-sm text-violet-400">
+                      <span className="font-medium">Get Started</span>
+                      <span className="transition-transform duration-200 group-hover:translate-x-1">
+                        →
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
+              </Link>
 
-                {/* Form Summary */}
-                <Card className="border-zinc-800 bg-zinc-900/50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg text-white">
-                      Document Info
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span className="text-zinc-500">Student:</span>
-                        <p className="text-zinc-200">{formData.name}</p>
-                      </div>
-                      <div>
-                        <span className="text-zinc-500">Roll No:</span>
-                        <p className="text-zinc-200">{formData.rollNo}</p>
-                      </div>
-                      <div>
-                        <span className="text-zinc-500">Experiment:</span>
-                        <p className="text-zinc-200">#{formData.expNo}</p>
-                      </div>
-                      <div>
-                        <span className="text-zinc-500">Date:</span>
-                        <p className="text-zinc-200">{formData.date}</p>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-zinc-500">Subject:</span>
-                        <p className="text-zinc-200">{formData.subject}</p>
-                      </div>
+              {/* Card 2: Smart Formatter */}
+              <Link href="/format" className="group">
+                <Card className="relative h-full cursor-pointer overflow-hidden border-zinc-800 bg-zinc-900/50 transition-all duration-300 hover:border-emerald-600/50 hover:bg-zinc-900/80 hover:shadow-lg hover:shadow-emerald-600/10">
+                  {/* Gradient overlay on hover */}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-emerald-600/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                  <CardHeader className="relative pb-4">
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-600/25">
+                      <Upload className="h-7 w-7 text-white" />
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Right Column: Live Terminal Preview */}
-              <div className="space-y-4">
-                <Card className="border-zinc-800 bg-zinc-900/50">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg text-white">
-                      Output Preview
+                    <CardTitle className="text-xl text-white transition-colors group-hover:text-emerald-300">
+                      Smart Formatter
                     </CardTitle>
-                    <CardDescription className="text-zinc-400">
-                      This screenshot will be included in your document.
+                    <CardDescription className="text-base text-zinc-400">
+                      I have the Code & Screenshot. Just format the DOCX.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="overflow-x-auto">
-                    {/* Isolated container to prevent CSS color inheritance for html2canvas */}
-                    <div style={{ isolation: "isolate", all: "initial", display: "block" }}>
-                      <FakeTerminal
-                        type={result.type}
-                        subject={formData.subject}
-                        code={editableCode}
-                        output_text={editableOutput}
-                      />
+
+                  <CardContent className="relative">
+                    <div className="flex items-center gap-2 text-sm text-emerald-400">
+                      <span className="font-medium">Coming Soon</span>
+                      <span className="transition-transform duration-200 group-hover:translate-x-1">
+                        →
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Features Grid Section */}
+        <section className="border-t border-zinc-800/50 px-4 py-16">
+          <div className="mx-auto max-w-4xl">
+            <h2 className="mb-10 text-center text-2xl font-semibold text-white">
+              Built for Speed & Convenience
+            </h2>
+
+            <div className="grid gap-6 sm:grid-cols-3">
+              {/* Feature 1: Cloud Save */}
+              <div className="group flex flex-col items-center rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-6 text-center transition-colors hover:border-zinc-700 hover:bg-zinc-900/50">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition-colors group-hover:bg-blue-500/20">
+                  <Cloud className="h-6 w-6" />
+                </div>
+                <h3 className="mb-2 font-semibold text-white">Cloud Save</h3>
+                <p className="text-sm text-zinc-500">
+                  Your experiments are saved to your dashboard for easy access.
+                </p>
+              </div>
+
+              {/* Feature 2: Ink Saver */}
+              <div className="group flex flex-col items-center rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-6 text-center transition-colors hover:border-zinc-700 hover:bg-zinc-900/50">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 transition-colors group-hover:bg-emerald-500/20">
+                  <Droplets className="h-6 w-6" />
+                </div>
+                <h3 className="mb-2 font-semibold text-white">Ink Saver</h3>
+                <p className="text-sm text-zinc-500">
+                  Optimized output formatting to save printer ink.
+                </p>
+              </div>
+
+              {/* Feature 3: Instant Generation */}
+              <div className="group flex flex-col items-center rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-6 text-center transition-colors hover:border-zinc-700 hover:bg-zinc-900/50">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 transition-colors group-hover:bg-amber-500/20">
+                  <Zap className="h-6 w-6" />
+                </div>
+                <h3 className="mb-2 font-semibold text-white">
+                  Instant Generation
+                </h3>
+                <p className="text-sm text-zinc-500">
+                  Get your complete lab record in under 30 seconds.
+                </p>
               </div>
             </div>
           </div>
-        )}
-
-        {/* Loading Overlay */}
-        {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-4 rounded-xl bg-zinc-900 p-8 shadow-2xl">
-              <Loader2 className="h-10 w-10 animate-spin text-violet-500" />
-              <p className="text-lg font-medium text-white">
-                {result ? "Generating Document..." : "Generating Content..."}
-              </p>
-            </div>
-          </div>
-        )}
+        </section>
       </main>
 
       <Footer />
