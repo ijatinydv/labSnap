@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { toBlob } from "html-to-image";
+import { useAuth } from "@clerk/nextjs";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { LabForm, LabFormData } from "@/components/LabForm";
 import { FakeTerminal } from "@/components/FakeTerminal";
 import { generateLabRecord, LabData } from "@/lib/generateDoc";
-import { Loader2, FileDown, ArrowLeft, Sparkles } from "lucide-react";
+import { Loader2, FileDown, ArrowLeft, Sparkles, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -28,8 +29,12 @@ interface APIResult {
 }
 
 export default function Home() {
+  // Auth state
+  const { isSignedIn } = useAuth();
+
   // State management
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<APIResult | null>(null);
   const [formData, setFormData] = useState<LabFormData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -135,6 +140,41 @@ export default function Home() {
     setError(null);
   };
 
+  // Save to Dashboard handler
+  const handleSave = async () => {
+    if (!result || !formData) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/experiments/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aim: formData.aim,
+          subject: formData.subject,
+          code: editableCode,
+          output_text: editableOutput,
+          theory: result.type === "dbms" ? editableTheory : undefined,
+          syntax: result.type === "dbms" ? editableSyntax : undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save experiment");
+      }
+
+      alert(`✅ ${data.message}\nCredits remaining: ${data.creditsRemaining}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save experiment");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950">
       <Navbar />
@@ -179,6 +219,21 @@ export default function Home() {
                   <Sparkles className="h-3.5 w-3.5" />
                   AI Generated
                 </span>
+                {isSignedIn && (
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving}
+                    variant="outline"
+                    className="border-emerald-700 text-emerald-400 hover:bg-emerald-950 hover:text-emerald-300"
+                  >
+                    {saving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save to Dashboard
+                  </Button>
+                )}
                 <Button
                   onClick={handleDownload}
                   disabled={loading}
