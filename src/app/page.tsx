@@ -115,7 +115,7 @@ export default function Home() {
 
                   <CardContent className="relative">
                     <div className="flex items-center gap-2 text-sm text-emerald-400">
-                      <span className="font-medium">Coming Soon</span>
+                      <span className="font-medium">Get Started</span>
                       <span className="transition-transform duration-200 group-hover:translate-x-1">
                         →
                       </span>

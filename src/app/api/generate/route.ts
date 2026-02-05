@@ -12,6 +12,7 @@ interface GenerateRequest {
   subject: string;
   name: string;
   rollNo: string;
+  mode?: "full" | "theory_only"; // New: support theory-only mode for Smart Formatter
 }
 
 interface DBMSResponse {
@@ -22,13 +23,19 @@ interface DBMSResponse {
   output_text: string;
 }
 
+interface TheoryOnlyResponse {
+  type: "dbms";
+  theory: string;
+  syntax: string;
+}
+
 interface CodingResponse {
   type: "coding";
   code: string;
   output_text: string;
 }
 
-type GenerateResponse = DBMSResponse | CodingResponse;
+type GenerateResponse = DBMSResponse | CodingResponse | TheoryOnlyResponse;
 
 // Helper to determine if subject is DBMS/SQL related
 function isDBMSSubject(subject: string): boolean {
@@ -38,7 +45,30 @@ function isDBMSSubject(subject: string): boolean {
   );
 }
 
-// Build messages array based on subject type
+// Build messages for theory-only mode (DBMS subjects in Smart Formatter)
+function buildTheoryOnlyMessages(
+  aim: string,
+  subject: string
+): { role: "system" | "user"; content: string }[] {
+  return [
+    {
+      role: "system",
+      content: "You are a DBMS Lab Assistant. Return strict JSON only.",
+    },
+    {
+      role: "user",
+      content: `For the ${subject} experiment aim: '${aim}'
+
+Provide ONLY:
+1. A short theory (2-3 sentences explaining the concept)
+2. The generic syntax for the SQL command(s) used
+
+Return JSON: { "type": "dbms", "theory": "...", "syntax": "..." }`,
+    },
+  ];
+}
+
+// Build messages array based on subject type (original full mode)
 function buildMessages(
   aim: string,
   subject: string,
@@ -134,17 +164,30 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body: GenerateRequest = await request.json();
-    const { aim, subject, name, rollNo } = body;
+    const { aim, subject, name, rollNo, mode = "full" } = body;
 
-    // Validate required fields
-    if (!aim || !subject || !name || !rollNo) {
-      return NextResponse.json(
-        {
-          error: "Missing required fields",
-          required: ["aim", "subject", "name", "rollNo"],
-        },
-        { status: 400 }
-      );
+    // Theory-only mode: only need aim and subject
+    if (mode === "theory_only") {
+      if (!aim || !subject) {
+        return NextResponse.json(
+          {
+            error: "Missing required fields for theory_only mode",
+            required: ["aim", "subject"],
+          },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Full mode: validate all required fields
+      if (!aim || !subject || !name || !rollNo) {
+        return NextResponse.json(
+          {
+            error: "Missing required fields",
+            required: ["aim", "subject", "name", "rollNo"],
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Check for API key
@@ -155,15 +198,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build the messages
-    const messages = buildMessages(aim, subject, name, rollNo);
+    // Build the messages based on mode
+    const messages = mode === "theory_only"
+      ? buildTheoryOnlyMessages(aim, subject)
+      : buildMessages(aim, subject, name, rollNo);
 
     // Call MiMo-V2-Flash via Novita AI
     const response = await openai.chat.completions.create({
       model: "xiaomimimo/mimo-v2-flash",
       messages: messages,
       response_format: { type: "json_object" },
-      max_tokens: 1000,
+      max_tokens: mode === "theory_only" ? 500 : 1000,
       temperature: 0.7,
     });
 
