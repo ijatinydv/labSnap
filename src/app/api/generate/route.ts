@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { db } from "@/lib/db";
 
 // Initialize OpenAI client with Novita AI configuration
 const openai = new OpenAI({
@@ -12,7 +14,7 @@ interface GenerateRequest {
   subject: string;
   name: string;
   rollNo: string;
-  mode?: "full" | "theory_only"; // New: support theory-only mode for Smart Formatter
+  mode?: "full" | "theory_only";
 }
 
 interface DBMSResponse {
@@ -160,8 +162,71 @@ function cleanResponse(text: string): string {
   return cleaned.trim();
 }
 
+// Get client IP from request headers
+function getClientIP(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    return forwarded.split(",")[0].trim();
+  }
+  return request.headers.get("x-real-ip") || "unknown";
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // === HYBRID AUTH: Check if user is logged in ===
+    const { userId } = await auth();
+
+    if (userId) {
+      // === LOGGED-IN USER FLOW ===
+      // Sync user to database
+      const user = await db.user.upsert({
+        where: { clerkId: userId },
+        update: {},
+        create: {
+          clerkId: userId,
+          email: `${userId}@clerk.user`,
+          credits: 10, // New users get 10 credits
+        },
+      });
+
+      // Check credits
+      if (user.credits <= 0) {
+        return NextResponse.json(
+          { error: "Insufficient Credits. Please upgrade your plan." },
+          { status: 403 }
+        );
+      }
+
+      // Deduct 1 credit immediately
+      await db.user.update({
+        where: { clerkId: userId },
+        data: { credits: { decrement: 1 } },
+      });
+    } else {
+      // === GUEST USER FLOW ===
+      const clientIP = getClientIP(request);
+
+      // Check guest usage
+      const guestUsage = await db.guestUsage.findUnique({
+        where: { ip: clientIP },
+      });
+
+      if (guestUsage && guestUsage.count >= 2) {
+        return NextResponse.json(
+          { error: "Guest limit reached. Login to get 10 credits!" },
+          { status: 403 }
+        );
+      }
+
+      // Increment guest usage count
+      await db.guestUsage.upsert({
+        where: { ip: clientIP },
+        update: { count: { increment: 1 } },
+        create: { ip: clientIP, count: 1 },
+      });
+    }
+
+    // === CONTINUE WITH GENERATION ===
     // Parse request body
     const body: GenerateRequest = await request.json();
     const { aim, subject, name, rollNo, mode = "full" } = body;
