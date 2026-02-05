@@ -50,7 +50,7 @@ function buildMessages(
     return [
       {
         role: "system",
-        content: "You are a DBMS Lab Assistant. Return strict JSON only.",
+        content: "You are a DBMS Lab Assistant. Return strict JSON only. Write clean code with minimal comments - only add comments where absolutely necessary.",
       },
       {
         role: "user",
@@ -58,33 +58,35 @@ function buildMessages(
 
 Strict Constraints:
 
-**Code:** Write the SQL query. The very first line MUST be a comment: -- Student: ${name} | Roll: ${rollNo}
+**Code:** Write the SQL query with minimal comments. The very first TWO lines MUST be comments:
+-- Name: ${name}
+-- Enrollment No.: ${rollNo}
 
 **Output:** Generate a text block representing the query result. Use strict ASCII table formatting (using +, -, |) to look exactly like MariaDB/MySQL.
 
 **Theory/Syntax:** Provide a short theory (2 lines) and the generic syntax for the command.
 
-Return JSON: { "type": "dbms", "theory": "...", "syntax": "...", "code": "...", "output_text": "..." }`,
+Return JSON: { "type": "dbms", "theory": "...", "syntax": "...", "code": "-- Name: ${name}\\n-- Enrollment No.: ${rollNo}\\n...", "output_text": "..." }`,
       },
     ];
   } else {
     // Scenario B: C++, Java, Python, DSA
     const printExamples: Record<string, string> = {
-      "c++": `cout << "Student: ${name} | Roll: ${rollNo}" << endl;`,
-      java: `System.out.println("Student: ${name} | Roll: ${rollNo}");`,
-      python: `print("Student: ${name} | Roll: ${rollNo}")`,
-      dsa: `cout << "Student: ${name} | Roll: ${rollNo}" << endl;`,
+      "c++": `cout << "Name: ${name}" << endl;\\ncout << "Enrollment No.: ${rollNo}" << endl;`,
+      java: `System.out.println("Name: ${name}");\\nSystem.out.println("Enrollment No.: ${rollNo}");`,
+      python: `print("Name: ${name}")\\nprint("Enrollment No.: ${rollNo}")`,
+      dsa: `cout << "Name: ${name}" << endl;\\ncout << "Enrollment No.: ${rollNo}" << endl;`,
     };
 
     const subjectLower = subject.toLowerCase();
     const printExample =
       printExamples[subjectLower] ||
-      `print("Student: ${name} | Roll: ${rollNo}")`;
+      `print("Name: ${name}")\\nprint("Enrollment No.: ${rollNo}")`;
 
     return [
       {
         role: "system",
-        content: "You are a Coding Lab Assistant. Return strict JSON only.",
+        content: "You are a Coding Lab Assistant. Return strict JSON only. Write clean, efficient code with minimal comments - only add comments where absolutely necessary for understanding.",
       },
       {
         role: "user",
@@ -92,13 +94,17 @@ Return JSON: { "type": "dbms", "theory": "...", "syntax": "...", "code": "...", 
 
 Strict Constraints:
 
-**Code:** The FIRST executable line in main() or the entry point MUST be a print statement that outputs exactly: "Student: ${name} | Roll: ${rollNo}"
+**Code:** Write clean code with VERY FEW comments (only essential ones). The FIRST TWO executable lines in main() or the entry point MUST print:
+Line 1: "Name: ${name}"
+Line 2: "Enrollment No.: ${rollNo}"
 Example for ${subject}: ${printExample}
 
-**Output:** Generate a realistic terminal session output. The VERY FIRST LINE of output MUST be exactly: "Student: ${name} | Roll: ${rollNo}"
+**Output:** Generate a realistic terminal session output. The VERY FIRST TWO LINES of output MUST be exactly:
+Name: ${name}
+Enrollment No.: ${rollNo}
 Then show the rest of the program output below it.
 
-Return JSON: { "type": "coding", "code": "...", "output_text": "Student: ${name} | Roll: ${rollNo}\\n..." }`,
+Return JSON: { "type": "coding", "code": "...", "output_text": "Name: ${name}\\nEnrollment No.: ${rollNo}\\n..." }`,
       },
     ];
   }
