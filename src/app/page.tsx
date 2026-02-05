@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import html2canvas from "html2canvas";
+import { toBlob } from "html-to-image";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { LabForm, LabFormData } from "@/components/LabForm";
@@ -86,77 +86,26 @@ export default function Home() {
     setLoading(true);
 
     try {
-      // Create a clean HTML element for screenshot (bypasses Tailwind CSS colors)
+      // Capture the terminal preview using html-to-image
+      const terminalElement = document.getElementById("terminal-preview");
       let screenshotBlob: Blob | null = null;
 
-      // Build terminal HTML string based on type
-      const isDBMS = result.type === "dbms";
-      const terminalHTML = isDBMS
-        ? `
-          <div style="min-width:600px;overflow:hidden;border-radius:4px;border:2px solid #000000;background-color:#ffffff;font-family:Consolas,monospace;">
-            <div style="border-bottom:2px solid #000000;background-color:#f3f4f6;padding:8px 16px;">
-              <p style="font-size:14px;font-weight:bold;color:#000000;margin:0;">MySQL Command Line Client - MariaDB Monitor</p>
-              <p style="font-size:12px;color:#4b5563;margin:4px 0 0 0;">Server version: 10.11.2-MariaDB</p>
-            </div>
-            <div style="background-color:#ffffff;padding:16px;">
-              <div style="margin-bottom:12px;font-size:14px;color:#4b5563;">
-                <p style="margin:0;">Type 'help;' or '\\h' for help.</p>
-                <p style="margin:4px 0 0 0;">Current database: mait</p>
-              </div>
-              <div style="font-size:14px;color:#000000;">
-                <span style="font-weight:bold;color:#7c3aed;">MariaDB [mait]&gt;</span>
-                <span style="color:#1f2937;"> SELECT * FROM result;</span>
-              </div>
-              <pre style="margin-top:12px;white-space:pre-wrap;font-size:14px;color:#000000;">${editableOutput}</pre>
-              <div style="margin-top:12px;font-size:14px;color:#000000;">
-                <span style="font-weight:bold;color:#7c3aed;">MariaDB [mait]&gt;</span>
-              </div>
-            </div>
-          </div>
-        `
-        : `
-          <div style="min-width:600px;overflow:hidden;border-radius:8px;border:1px solid #d1d5db;background-color:#ffffff;font-family:Consolas,monospace;">
-            <div style="display:flex;align-items:center;gap:4px;border-bottom:1px solid #e5e7eb;background-color:#f9fafb;padding:6px 12px;font-size:12px;">
-              <span style="color:#6b7280;">PROBLEMS</span>
-              <span style="color:#6b7280;margin-left:8px;">OUTPUT</span>
-              <span style="color:#6b7280;margin-left:8px;">DEBUG CONSOLE</span>
-              <span style="border-bottom:2px solid #3b82f6;padding:4px 8px;font-weight:600;color:#1f2937;margin-left:8px;">TERMINAL</span>
-            </div>
-            <div style="background-color:#ffffff;padding:16px;">
-              <div style="font-size:14px;color:#000000;">
-                <span style="font-weight:bold;color:#2563eb;">PS D:\\MAIT\\Labs\\${formData.subject}&gt;</span>
-                <span style="color:#374151;"> run program</span>
-              </div>
-              <pre style="margin-top:12px;white-space:pre-wrap;font-size:14px;color:#000000;">${editableOutput}</pre>
-              <div style="margin-top:12px;font-size:14px;color:#000000;">
-                <span style="font-weight:bold;color:#2563eb;">PS D:\\MAIT\\Labs\\${formData.subject}&gt;</span>
-              </div>
-            </div>
-          </div>
-        `;
+      if (terminalElement) {
+        try {
+          screenshotBlob = await toBlob(terminalElement, {
+            backgroundColor: "#ffffff",
+            quality: 0.95,
+            pixelRatio: 2,
+          });
+        } catch (captureError) {
+          console.error("Screenshot capture failed:", captureError);
+          alert("Failed to capture output screenshot. The document will be generated without it.");
+        }
+      }
 
-      // Create temporary container and append to body
-      const tempContainer = document.createElement("div");
-      tempContainer.style.position = "absolute";
-      tempContainer.style.left = "-9999px";
-      tempContainer.style.top = "0";
-      tempContainer.style.backgroundColor = "#ffffff";
-      tempContainer.innerHTML = terminalHTML;
-      document.body.appendChild(tempContainer);
-
-      // Capture the element
-      const canvas = await html2canvas(tempContainer.firstElementChild as HTMLElement, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-        logging: false,
-      });
-
-      // Remove temp container
-      document.body.removeChild(tempContainer);
-
-      screenshotBlob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((blob) => resolve(blob), "image/png", 1.0);
-      });
+      if (!screenshotBlob) {
+        console.warn("Screenshot blob is null, continuing without screenshot");
+      }
 
       // Prepare data with EDITED content
       const labData: LabData = {
