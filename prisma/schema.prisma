@@ -1,0 +1,35 @@
+// Prisma Schema for LabSnap
+// Database: MongoDB
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+}
+
+model User {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  clerkId     String       @unique
+  email       String       @unique
+  name        String?
+  credits     Int          @default(5)
+  createdAt   DateTime     @default(now())
+  experiments Experiment[]
+}
+
+model Experiment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  aim       String
+  subject   String
+  code      String
+  output    String
+  theory    String?
+  syntax    String?
+  createdAt DateTime @default(now())
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
