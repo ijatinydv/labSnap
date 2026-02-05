@@ -45,6 +45,12 @@ export function Navbar() {
 
           {/* Auth: User Avatar (when logged in) */}
           <SignedIn>
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-2 text-sm font-medium text-zinc-300 transition-all duration-200 hover:border-violet-700 hover:bg-violet-950/50 hover:text-white"
+            >
+              Dashboard
+            </Link>
             <UserButton
               afterSignOutUrl="/"
               appearance={{
