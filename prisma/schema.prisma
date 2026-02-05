@@ -34,3 +34,10 @@ model Experiment {
 
   @@index([userId])
 }
+
+model GuestUsage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  ip        String   @unique
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
