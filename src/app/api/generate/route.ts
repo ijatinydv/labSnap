@@ -92,12 +92,13 @@ Return JSON: { "type": "dbms", "theory": "...", "syntax": "...", "code": "...", 
 
 Strict Constraints:
 
-**Code:** The first line of execution MUST print: 'Student: ${name} | Roll: ${rollNo}'.
+**Code:** The FIRST executable line in main() or the entry point MUST be a print statement that outputs exactly: "Student: ${name} | Roll: ${rollNo}"
 Example for ${subject}: ${printExample}
 
-**Output:** Generate a realistic terminal session. The first line of output MUST be that specific print statement.
+**Output:** Generate a realistic terminal session output. The VERY FIRST LINE of output MUST be exactly: "Student: ${name} | Roll: ${rollNo}"
+Then show the rest of the program output below it.
 
-Return JSON: { "type": "coding", "code": "...", "output_text": "..." }`,
+Return JSON: { "type": "coding", "code": "...", "output_text": "Student: ${name} | Roll: ${rollNo}\\n..." }`,
       },
     ];
   }

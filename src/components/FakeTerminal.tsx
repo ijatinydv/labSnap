@@ -25,88 +25,178 @@ export function FakeTerminal({
   };
 
   if (type === "coding") {
-    // Style A: Fake VS Code Terminal
+    // Style A: Fake VS Code Terminal - using HEX colors for html2canvas compatibility
     return (
       <div
         id="terminal-preview"
-        className="min-w-[600px] overflow-hidden rounded-lg border border-gray-300 bg-white shadow-sm"
+        style={{
+          minWidth: "600px",
+          overflow: "hidden",
+          borderRadius: "8px",
+          border: "1px solid #d1d5db",
+          backgroundColor: "#ffffff",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+        }}
       >
         {/* VS Code Tab Bar */}
-        <div className="flex items-center gap-1 border-b border-gray-200 bg-gray-50 px-3 py-1.5 text-xs">
-          <span className="text-gray-500">PROBLEMS</span>
-          <span className="text-gray-500">OUTPUT</span>
-          <span className="text-gray-500">DEBUG CONSOLE</span>
-          <span className="border-b-2 border-blue-500 px-2 py-1 font-semibold text-gray-800">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            borderBottom: "1px solid #e5e7eb",
+            backgroundColor: "#f9fafb",
+            padding: "6px 12px",
+            fontSize: "12px",
+          }}
+        >
+          <span style={{ color: "#6b7280" }}>PROBLEMS</span>
+          <span style={{ color: "#6b7280", marginLeft: "8px" }}>OUTPUT</span>
+          <span style={{ color: "#6b7280", marginLeft: "8px" }}>DEBUG CONSOLE</span>
+          <span
+            style={{
+              borderBottom: "2px solid #3b82f6",
+              padding: "4px 8px",
+              fontWeight: "600",
+              color: "#1f2937",
+              marginLeft: "8px",
+            }}
+          >
             TERMINAL
           </span>
         </div>
 
         {/* Terminal Body */}
-        <div className="bg-white p-4">
+        <div style={{ backgroundColor: "#ffffff", padding: "16px" }}>
           {/* Prompt Line */}
-          <div className="font-mono text-sm text-black">
-            <span className="font-bold text-blue-600">
+          <div style={{ fontFamily: "Consolas, monospace", fontSize: "14px", color: "#000000" }}>
+            <span style={{ fontWeight: "bold", color: "#2563eb" }}>
               PS D:\MAIT\Labs\{subject}&gt;
             </span>{" "}
-            <span className="text-gray-700">{getExecutionCommand(subject)}</span>
+            <span style={{ color: "#374151" }}>{getExecutionCommand(subject)}</span>
           </div>
 
           {/* Output Content */}
-          <pre className="mt-3 whitespace-pre-wrap font-mono text-sm text-black">
+          <pre
+            style={{
+              marginTop: "12px",
+              whiteSpace: "pre-wrap",
+              fontFamily: "Consolas, monospace",
+              fontSize: "14px",
+              color: "#000000",
+            }}
+          >
             {output_text}
           </pre>
 
           {/* New Prompt */}
-          <div className="mt-3 font-mono text-sm text-black">
-            <span className="font-bold text-blue-600">
+          <div
+            style={{
+              marginTop: "12px",
+              fontFamily: "Consolas, monospace",
+              fontSize: "14px",
+              color: "#000000",
+            }}
+          >
+            <span style={{ fontWeight: "bold", color: "#2563eb" }}>
               PS D:\MAIT\Labs\{subject}&gt;
             </span>{" "}
-            <span className="animate-pulse">▌</span>
+            <span>▌</span>
           </div>
         </div>
       </div>
     );
   }
 
-  // Style B: Fake MariaDB Terminal
+  // Style B: Fake MariaDB Terminal - using HEX colors for html2canvas compatibility
   return (
     <div
       id="terminal-preview"
-      className="min-w-[600px] overflow-hidden rounded border-2 border-black bg-white shadow-sm"
+      style={{
+        minWidth: "600px",
+        overflow: "hidden",
+        borderRadius: "4px",
+        border: "2px solid #000000",
+        backgroundColor: "#ffffff",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+      }}
     >
       {/* MariaDB Header */}
-      <div className="border-b-2 border-black bg-gray-100 px-4 py-2">
-        <p className="font-mono text-sm font-bold text-black">
+      <div
+        style={{
+          borderBottom: "2px solid #000000",
+          backgroundColor: "#f3f4f6",
+          padding: "8px 16px",
+        }}
+      >
+        <p
+          style={{
+            fontFamily: "Consolas, monospace",
+            fontSize: "14px",
+            fontWeight: "bold",
+            color: "#000000",
+            margin: 0,
+          }}
+        >
           MySQL Command Line Client - MariaDB Monitor
         </p>
-        <p className="font-mono text-xs text-gray-600">
+        <p
+          style={{
+            fontFamily: "Consolas, monospace",
+            fontSize: "12px",
+            color: "#4b5563",
+            margin: "4px 0 0 0",
+          }}
+        >
           Server version: 10.11.2-MariaDB
         </p>
       </div>
 
       {/* MariaDB Body */}
-      <div className="bg-white p-4">
+      <div style={{ backgroundColor: "#ffffff", padding: "16px" }}>
         {/* Connection Info */}
-        <div className="mb-3 font-mono text-sm text-gray-600">
-          <p>Type &apos;help;&apos; or &apos;\h&apos; for help.</p>
-          <p>Current database: mait</p>
+        <div
+          style={{
+            marginBottom: "12px",
+            fontFamily: "Consolas, monospace",
+            fontSize: "14px",
+            color: "#4b5563",
+          }}
+        >
+          <p style={{ margin: 0 }}>Type &apos;help;&apos; or &apos;\h&apos; for help.</p>
+          <p style={{ margin: "4px 0 0 0" }}>Current database: mait</p>
         </div>
 
         {/* Query Prompt */}
-        <div className="font-mono text-sm text-black">
-          <span className="font-bold text-purple-700">MariaDB [mait]&gt;</span>{" "}
-          <span className="text-gray-800">SELECT * FROM result;</span>
+        <div style={{ fontFamily: "Consolas, monospace", fontSize: "14px", color: "#000000" }}>
+          <span style={{ fontWeight: "bold", color: "#7c3aed" }}>MariaDB [mait]&gt;</span>{" "}
+          <span style={{ color: "#1f2937" }}>SELECT * FROM result;</span>
         </div>
 
         {/* Output Content (ASCII Table) */}
-        <pre className="mt-3 whitespace-pre-wrap font-mono text-sm text-black">
+        <pre
+          style={{
+            marginTop: "12px",
+            whiteSpace: "pre-wrap",
+            fontFamily: "Consolas, monospace",
+            fontSize: "14px",
+            color: "#000000",
+          }}
+        >
           {output_text}
         </pre>
 
         {/* New Prompt */}
-        <div className="mt-3 font-mono text-sm text-black">
-          <span className="font-bold text-purple-700">MariaDB [mait]&gt;</span>{" "}
-          <span className="animate-pulse">▌</span>
+        <div
+          style={{
+            marginTop: "12px",
+            fontFamily: "Consolas, monospace",
+            fontSize: "14px",
+            color: "#000000",
+          }}
+        >
+          <span style={{ fontWeight: "bold", color: "#7c3aed" }}>MariaDB [mait]&gt;</span>{" "}
+          <span>▌</span>
         </div>
       </div>
     </div>

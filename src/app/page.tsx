@@ -1,26 +1,189 @@
 "use client";
 
+import { useState } from "react";
+import html2canvas from "html2canvas";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { LabForm, LabFormData } from "@/components/LabForm";
+import { FakeTerminal } from "@/components/FakeTerminal";
+import { generateLabRecord, LabData } from "@/lib/generateDoc";
+import { Loader2, FileDown, ArrowLeft, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
+interface APIResult {
+  type: "dbms" | "coding";
+  theory?: string;
+  syntax?: string;
+  code: string;
+  output_text: string;
+}
 
 export default function Home() {
-  const handleSubmit = (data: LabFormData) => {
-    // Dummy submit handler - logs data to console
-    console.log("Form submitted with data:", data);
-    console.log("---");
-    console.log("Student Details:");
-    console.log(`  Name: ${data.name}`);
-    console.log(`  Roll No: ${data.rollNo}`);
-    console.log(`  Semester: ${data.semester}`);
-    console.log(`  Batch: ${data.batch}`);
-    console.log(`  Subject Code: ${data.subjectCode}`);
-    console.log("---");
-    console.log("Experiment Details:");
-    console.log(`  Experiment No: ${data.expNo}`);
-    console.log(`  Date: ${data.date}`);
-    console.log(`  Subject: ${data.subject}`);
-    console.log(`  Aim: ${data.aim}`);
+  // State management
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<APIResult | null>(null);
+  const [formData, setFormData] = useState<LabFormData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Editable fields (so users can modify AI output)
+  const [editableTheory, setEditableTheory] = useState("");
+  const [editableSyntax, setEditableSyntax] = useState("");
+  const [editableCode, setEditableCode] = useState("");
+  const [editableOutput, setEditableOutput] = useState("");
+
+  // Step 1: Handle form submission
+  const handleFormSubmit = async (data: LabFormData) => {
+    setLoading(true);
+    setError(null);
+    setFormData(data);
+
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aim: data.aim,
+          subject: data.subject,
+          name: data.name,
+          rollNo: data.rollNo,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate content");
+      }
+
+      const apiResult: APIResult = await response.json();
+      setResult(apiResult);
+
+      // Initialize editable fields with API response
+      setEditableTheory(apiResult.theory || "");
+      setEditableSyntax(apiResult.syntax || "");
+      setEditableCode(apiResult.code);
+      setEditableOutput(apiResult.output_text);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 4: Handle download
+  const handleDownload = async () => {
+    if (!result || !formData) return;
+
+    setLoading(true);
+
+    try {
+      // Create a clean HTML element for screenshot (bypasses Tailwind CSS colors)
+      let screenshotBlob: Blob | null = null;
+
+      // Build terminal HTML string based on type
+      const isDBMS = result.type === "dbms";
+      const terminalHTML = isDBMS
+        ? `
+          <div style="min-width:600px;overflow:hidden;border-radius:4px;border:2px solid #000000;background-color:#ffffff;font-family:Consolas,monospace;">
+            <div style="border-bottom:2px solid #000000;background-color:#f3f4f6;padding:8px 16px;">
+              <p style="font-size:14px;font-weight:bold;color:#000000;margin:0;">MySQL Command Line Client - MariaDB Monitor</p>
+              <p style="font-size:12px;color:#4b5563;margin:4px 0 0 0;">Server version: 10.11.2-MariaDB</p>
+            </div>
+            <div style="background-color:#ffffff;padding:16px;">
+              <div style="margin-bottom:12px;font-size:14px;color:#4b5563;">
+                <p style="margin:0;">Type 'help;' or '\\h' for help.</p>
+                <p style="margin:4px 0 0 0;">Current database: mait</p>
+              </div>
+              <div style="font-size:14px;color:#000000;">
+                <span style="font-weight:bold;color:#7c3aed;">MariaDB [mait]&gt;</span>
+                <span style="color:#1f2937;"> SELECT * FROM result;</span>
+              </div>
+              <pre style="margin-top:12px;white-space:pre-wrap;font-size:14px;color:#000000;">${editableOutput}</pre>
+              <div style="margin-top:12px;font-size:14px;color:#000000;">
+                <span style="font-weight:bold;color:#7c3aed;">MariaDB [mait]&gt;</span>
+              </div>
+            </div>
+          </div>
+        `
+        : `
+          <div style="min-width:600px;overflow:hidden;border-radius:8px;border:1px solid #d1d5db;background-color:#ffffff;font-family:Consolas,monospace;">
+            <div style="display:flex;align-items:center;gap:4px;border-bottom:1px solid #e5e7eb;background-color:#f9fafb;padding:6px 12px;font-size:12px;">
+              <span style="color:#6b7280;">PROBLEMS</span>
+              <span style="color:#6b7280;margin-left:8px;">OUTPUT</span>
+              <span style="color:#6b7280;margin-left:8px;">DEBUG CONSOLE</span>
+              <span style="border-bottom:2px solid #3b82f6;padding:4px 8px;font-weight:600;color:#1f2937;margin-left:8px;">TERMINAL</span>
+            </div>
+            <div style="background-color:#ffffff;padding:16px;">
+              <div style="font-size:14px;color:#000000;">
+                <span style="font-weight:bold;color:#2563eb;">PS D:\\MAIT\\Labs\\${formData.subject}&gt;</span>
+                <span style="color:#374151;"> run program</span>
+              </div>
+              <pre style="margin-top:12px;white-space:pre-wrap;font-size:14px;color:#000000;">${editableOutput}</pre>
+              <div style="margin-top:12px;font-size:14px;color:#000000;">
+                <span style="font-weight:bold;color:#2563eb;">PS D:\\MAIT\\Labs\\${formData.subject}&gt;</span>
+              </div>
+            </div>
+          </div>
+        `;
+
+      // Create temporary container and append to body
+      const tempContainer = document.createElement("div");
+      tempContainer.style.position = "absolute";
+      tempContainer.style.left = "-9999px";
+      tempContainer.style.top = "0";
+      tempContainer.style.backgroundColor = "#ffffff";
+      tempContainer.innerHTML = terminalHTML;
+      document.body.appendChild(tempContainer);
+
+      // Capture the element
+      const canvas = await html2canvas(tempContainer.firstElementChild as HTMLElement, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        logging: false,
+      });
+
+      // Remove temp container
+      document.body.removeChild(tempContainer);
+
+      screenshotBlob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), "image/png", 1.0);
+      });
+
+      // Prepare data with EDITED content
+      const labData: LabData = {
+        expNo: formData.expNo,
+        date: formData.date,
+        aim: formData.aim,
+        subject: formData.subject,
+        name: formData.name,
+        rollNo: formData.rollNo,
+        theory: result.type === "dbms" ? editableTheory : undefined,
+        syntax: result.type === "dbms" ? editableSyntax : undefined,
+        code: editableCode,
+        screenshotBlob,
+      };
+
+      await generateLabRecord(labData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate document");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Back button handler
+  const handleBack = () => {
+    setResult(null);
+    setError(null);
   };
 
   return (
@@ -38,8 +201,195 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Form */}
-        <LabForm onSubmit={handleSubmit} />
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 w-full max-w-5xl rounded-lg border border-red-800 bg-red-950/50 p-4 text-red-300">
+            <p className="font-medium">Error: {error}</p>
+          </div>
+        )}
+
+        {/* Step 1: Show Form */}
+        {!result && <LabForm onSubmit={handleFormSubmit} />}
+
+        {/* Step 2 & 3: Preview Dashboard */}
+        {result && formData && (
+          <div className="w-full max-w-6xl space-y-6">
+            {/* Header with Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <Button
+                onClick={handleBack}
+                variant="outline"
+                className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Form
+              </Button>
+
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 rounded-full bg-emerald-950 px-3 py-1 text-sm text-emerald-400">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  AI Generated
+                </span>
+                <Button
+                  onClick={handleDownload}
+                  disabled={loading}
+                  className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-500 hover:to-indigo-500"
+                >
+                  {loading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileDown className="mr-2 h-4 w-4" />
+                  )}
+                  Download Word File
+                </Button>
+              </div>
+            </div>
+
+            {/* Two Column Layout */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Left Column: Editable Fields */}
+              <div className="space-y-4">
+                <Card className="border-zinc-800 bg-zinc-900/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg text-white">
+                      Edit Content
+                    </CardTitle>
+                    <CardDescription className="text-zinc-400">
+                      Modify the AI-generated content before downloading.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Theory (DBMS only) */}
+                    {result.type === "dbms" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="theory" className="text-zinc-300">
+                          Theory
+                        </Label>
+                        <Textarea
+                          id="theory"
+                          value={editableTheory}
+                          onChange={(e) => setEditableTheory(e.target.value)}
+                          className="min-h-[80px] border-zinc-700 bg-zinc-800/50 text-white"
+                        />
+                      </div>
+                    )}
+
+                    {/* Syntax (DBMS only) */}
+                    {result.type === "dbms" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="syntax" className="text-zinc-300">
+                          Syntax
+                        </Label>
+                        <Textarea
+                          id="syntax"
+                          value={editableSyntax}
+                          onChange={(e) => setEditableSyntax(e.target.value)}
+                          className="min-h-[80px] border-zinc-700 bg-zinc-800/50 font-mono text-sm text-white"
+                        />
+                      </div>
+                    )}
+
+                    {/* Code */}
+                    <div className="space-y-2">
+                      <Label htmlFor="code" className="text-zinc-300">
+                        Source Code
+                      </Label>
+                      <Textarea
+                        id="code"
+                        value={editableCode}
+                        onChange={(e) => setEditableCode(e.target.value)}
+                        className="min-h-[150px] border-zinc-700 bg-zinc-800/50 font-mono text-sm text-white"
+                      />
+                    </div>
+
+                    {/* Output Text */}
+                    <div className="space-y-2">
+                      <Label htmlFor="output" className="text-zinc-300">
+                        Output Text
+                      </Label>
+                      <Textarea
+                        id="output"
+                        value={editableOutput}
+                        onChange={(e) => setEditableOutput(e.target.value)}
+                        className="min-h-[100px] border-zinc-700 bg-zinc-800/50 font-mono text-sm text-white"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Form Summary */}
+                <Card className="border-zinc-800 bg-zinc-900/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg text-white">
+                      Document Info
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-zinc-500">Student:</span>
+                        <p className="text-zinc-200">{formData.name}</p>
+                      </div>
+                      <div>
+                        <span className="text-zinc-500">Roll No:</span>
+                        <p className="text-zinc-200">{formData.rollNo}</p>
+                      </div>
+                      <div>
+                        <span className="text-zinc-500">Experiment:</span>
+                        <p className="text-zinc-200">#{formData.expNo}</p>
+                      </div>
+                      <div>
+                        <span className="text-zinc-500">Date:</span>
+                        <p className="text-zinc-200">{formData.date}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-zinc-500">Subject:</span>
+                        <p className="text-zinc-200">{formData.subject}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column: Live Terminal Preview */}
+              <div className="space-y-4">
+                <Card className="border-zinc-800 bg-zinc-900/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg text-white">
+                      Output Preview
+                    </CardTitle>
+                    <CardDescription className="text-zinc-400">
+                      This screenshot will be included in your document.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    {/* Isolated container to prevent CSS color inheritance for html2canvas */}
+                    <div style={{ isolation: "isolate", all: "initial", display: "block" }}>
+                      <FakeTerminal
+                        type={result.type}
+                        subject={formData.subject}
+                        code={editableCode}
+                        output_text={editableOutput}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading Overlay */}
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-4 rounded-xl bg-zinc-900 p-8 shadow-2xl">
+              <Loader2 className="h-10 w-10 animate-spin text-violet-500" />
+              <p className="text-lg font-medium text-white">
+                {result ? "Generating Document..." : "Generating Content..."}
+              </p>
+            </div>
+          </div>
+        )}
       </main>
 
       <Footer />
