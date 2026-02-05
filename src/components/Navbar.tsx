@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { FileText, Github } from "lucide-react";
+import {
+  SignInButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from "@clerk/nextjs";
 
 export function Navbar() {
   return (
@@ -15,16 +21,41 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* GitHub Link */}
-        <Link
-          href="https://github.com/ijatinydv/labSnap"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-2 text-sm font-medium text-zinc-300 transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-800 hover:text-white"
-        >
-          <Github className="h-4 w-4" />
-          <span className="hidden sm:inline">GitHub</span>
-        </Link>
+        {/* Right Side: GitHub + Auth */}
+        <div className="flex items-center gap-3">
+          {/* GitHub Link */}
+          <Link
+            href="https://github.com/ijatinydv/labSnap"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-2 text-sm font-medium text-zinc-300 transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-800 hover:text-white"
+          >
+            <Github className="h-4 w-4" />
+            <span className="hidden sm:inline">GitHub</span>
+          </Link>
+
+          {/* Auth: Sign In Button (when logged out) */}
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-violet-500/25 transition-all duration-200 hover:shadow-violet-500/40 hover:scale-105">
+                Sign In
+              </button>
+            </SignInButton>
+          </SignedOut>
+
+          {/* Auth: User Avatar (when logged in) */}
+          <SignedIn>
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  avatarBox:
+                    "h-9 w-9 ring-2 ring-violet-500/50 hover:ring-violet-500 transition-all duration-200",
+                },
+              }}
+            />
+          </SignedIn>
+        </div>
       </div>
     </header>
   );
