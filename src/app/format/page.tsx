@@ -14,6 +14,7 @@ import {
   FileText,
   Code,
   Target,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -166,12 +167,12 @@ export default function FormatPage() {
 
       // Prepare lab data for document generation
       const labData: LabData = {
-        expNo: formData.expNo || "1",
-        date: formData.date || new Date().toISOString().split("T")[0],
+        expNo: formData.expNo,
+        date: formData.date,
         aim: formData.aim,
         subject: formData.subject,
-        name: formData.name || "Student",
-        rollNo: formData.rollNo || "N/A",
+        name: formData.name,
+        rollNo: formData.rollNo,
         theory,
         syntax,
         code: formData.code,
@@ -219,7 +220,7 @@ export default function FormatPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="w-full max-w-3xl space-y-6">
-          {/* Student Info Card */}
+          {/* Unified Form Card */}
           <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
             <CardHeader className="border-b border-zinc-800 pb-4">
               <div className="flex items-center gap-3">
@@ -228,15 +229,23 @@ export default function FormatPage() {
                 </div>
                 <div>
                   <CardTitle className="text-lg text-white">
-                    Document Details
+                    Document Generation Details
                   </CardTitle>
                   <CardDescription className="text-zinc-400">
-                    Basic information for your lab record
+                    Enter details and upload content to generate your record
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="grid gap-5 pt-6 sm:grid-cols-2">
+              {/* Section 1: Student Details */}
+              <div className="col-span-full">
+                <h3 className="mb-4 flex items-center text-sm font-medium text-zinc-400">
+                  <User className="mr-2 h-4 w-4" /> {/* Use User icon here */}
+                  Student Details
+                </h3>
+              </div>
+
               {/* Name */}
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-zinc-300">
@@ -325,29 +334,17 @@ export default function FormatPage() {
                   </p>
                 )}
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Content Card */}
-          <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
-            <CardHeader className="border-b border-zinc-800 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 shadow-lg shadow-emerald-500/20">
-                  <Code className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg text-white">
-                    Your Content
-                  </CardTitle>
-                  <CardDescription className="text-zinc-400">
-                    Paste your code and upload output screenshot
-                  </CardDescription>
-                </div>
+              {/* Section Divider */}
+              <div className="col-span-full mt-2 border-t border-zinc-800 pt-4">
+                <h3 className="mb-4 flex items-center text-sm font-medium text-zinc-400">
+                  <Code className="mr-2 h-4 w-4" />
+                  Experiment Content
+                </h3>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-5 pt-6">
+
               {/* Aim */}
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="aim" className="text-zinc-300">
                   <Target className="mr-1.5 inline h-3.5 w-3.5" />
                   Aim of the Experiment
@@ -364,7 +361,7 @@ export default function FormatPage() {
               </div>
 
               {/* Code */}
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="code" className="text-zinc-300">
                   <Code className="mr-1.5 inline h-3.5 w-3.5" />
                   Source Code
@@ -381,7 +378,7 @@ export default function FormatPage() {
               </div>
 
               {/* Screenshot Upload */}
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label className="text-zinc-300">
                   <ImageIcon className="mr-1.5 inline h-3.5 w-3.5" />
                   Output Screenshot

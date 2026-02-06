@@ -23,6 +23,15 @@ export interface LabData {
   screenshotBlob: Blob | null;
 }
 
+
+// Helper to parse "YYYY-MM-DD" to "DD/MM/YYYY"
+function formatDate(dateString: string): string {
+  if (!dateString) return "";
+  const [year, month, day] = dateString.split("-");
+  if (!year || !month || !day) return dateString;
+  return `${day}/${month}/${year}`;
+}
+
 // Helper to create a heading paragraph
 function createHeading(text: string): Paragraph {
   return new Paragraph({
@@ -61,8 +70,8 @@ function createCodeBlock(code: string): Paragraph[] {
         children: [
           new TextRun({
             text: line || " ", // Empty lines need at least a space
-            font: "Consolas",
-            size: 20, // 10pt = 20 half-points
+            font: "Times New Roman",
+            size: 24, // 12pt = 24 half-points
           }),
         ],
         spacing: { after: 0 },
@@ -103,7 +112,7 @@ export async function generateLabRecord(data: LabData): Promise<void> {
     new Paragraph({
       children: [
         new TextRun({
-          text: `Date: ${date}`,
+          text: `Date: ${formatDate(date)}`,
           font: "Times New Roman",
           size: 24, // 12pt
         }),

@@ -27,17 +27,15 @@ import {
 // Zod validation schema
 const formSchema = z.object({
   // Section 1: Student Details
-  name: z.string().min(1, "Name is required"),
-  rollNo: z.string().min(1, "Roll number is required"),
-  semester: z.string().min(1, "Semester is required"),
-  batch: z.string().min(1, "Batch is required"),
-  subjectCode: z.string().min(1, "Subject code is required"),
+  name: z.string().optional(),
+  rollNo: z.string().optional(),
 
   // Section 2: Experiment Details
-  expNo: z.string().min(1, "Experiment number is required"),
-  date: z.string().min(1, "Date is required"),
-  aim: z.string().min(10, "Aim must be at least 10 characters"),
+  expNo: z.string().optional(),
+  date: z.string().optional(),
+  aim: z.string().min(1, "Aim is required"),
   subject: z.string().min(1, "Subject is required"),
+  code: z.string().optional(), // Hidden field
 });
 
 export type LabFormData = z.infer<typeof formSchema>;
@@ -46,7 +44,6 @@ interface LabFormProps {
   onSubmit: (data: LabFormData) => void;
 }
 
-const semesters = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
 const subjects = ["DBMS/SQL", "Java", "C++", "Web Dev"];
 
 export function LabForm({ onSubmit }: LabFormProps) {
@@ -60,34 +57,42 @@ export function LabForm({ onSubmit }: LabFormProps) {
     defaultValues: {
       name: "",
       rollNo: "",
-      semester: "",
-      batch: "",
-      subjectCode: "",
       expNo: "",
       date: "",
       aim: "",
       subject: "",
+      code: "",
     },
   });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-3xl space-y-6">
-      {/* Section 1: Student Details */}
+      {/* Hidden Code Field */}
+      <input type="hidden" {...register("code")} />
+
       <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
         <CardHeader className="border-b border-zinc-800 pb-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/20">
-              <User className="h-5 w-5 text-white" />
+              <FlaskConical className="h-5 w-5 text-white" />
             </div>
             <div>
-              <CardTitle className="text-lg text-white">Student Details</CardTitle>
+              <CardTitle className="text-lg text-white">Lab Record Details</CardTitle>
               <CardDescription className="text-zinc-400">
-                For cover page generation
+                Enter student and experiment information
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="grid gap-5 pt-6 sm:grid-cols-2">
+          {/* Section 1: Student Details */}
+          <div className="col-span-full">
+            <h3 className="mb-4 flex items-center text-sm font-medium text-zinc-400">
+              <User className="mr-2 h-4 w-4" />
+              Student Details
+            </h3>
+          </div>
+
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="name" className="text-zinc-300">
@@ -121,85 +126,14 @@ export function LabForm({ onSubmit }: LabFormProps) {
             )}
           </div>
 
-          {/* Semester */}
-          <div className="space-y-2">
-            <Label htmlFor="semester" className="text-zinc-300">
-              <BookOpen className="mr-1.5 inline h-3.5 w-3.5" />
-              Semester
-            </Label>
-            <Select onValueChange={(value) => setValue("semester", value)}>
-              <SelectTrigger className="border-zinc-700 bg-zinc-800/50 text-white focus:border-violet-500 focus:ring-violet-500/20">
-                <SelectValue placeholder="Select semester" />
-              </SelectTrigger>
-              <SelectContent className="border-zinc-700 bg-zinc-900">
-                {semesters.map((sem) => (
-                  <SelectItem
-                    key={sem}
-                    value={sem}
-                    className="text-zinc-300 focus:bg-violet-600 focus:text-white"
-                  >
-                    {sem} Semester
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.semester && (
-              <p className="text-sm text-red-400">{errors.semester.message}</p>
-            )}
+          {/* Section Divider */}
+          <div className="col-span-full mt-2 border-t border-zinc-800 pt-4">
+            <h3 className="mb-4 flex items-center text-sm font-medium text-zinc-400">
+              <FlaskConical className="mr-2 h-4 w-4" />
+              Experiment Details
+            </h3>
           </div>
 
-          {/* Batch */}
-          <div className="space-y-2">
-            <Label htmlFor="batch" className="text-zinc-300">
-              <Users className="mr-1.5 inline h-3.5 w-3.5" />
-              Batch
-            </Label>
-            <Input
-              id="batch"
-              placeholder="e.g., C-6"
-              {...register("batch")}
-              className="border-zinc-700 bg-zinc-800/50 text-white placeholder:text-zinc-500 focus:border-violet-500 focus:ring-violet-500/20"
-            />
-            {errors.batch && (
-              <p className="text-sm text-red-400">{errors.batch.message}</p>
-            )}
-          </div>
-
-          {/* Subject Code */}
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="subjectCode" className="text-zinc-300">
-              <Code className="mr-1.5 inline h-3.5 w-3.5" />
-              Subject Code
-            </Label>
-            <Input
-              id="subjectCode"
-              placeholder="e.g., CIC-256"
-              {...register("subjectCode")}
-              className="border-zinc-700 bg-zinc-800/50 text-white placeholder:text-zinc-500 focus:border-violet-500 focus:ring-violet-500/20"
-            />
-            {errors.subjectCode && (
-              <p className="text-sm text-red-400">{errors.subjectCode.message}</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Section 2: Experiment Details */}
-      <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
-        <CardHeader className="border-b border-zinc-800 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 shadow-lg shadow-emerald-500/20">
-              <FlaskConical className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-lg text-white">Experiment Details</CardTitle>
-              <CardDescription className="text-zinc-400">
-                Information about the current experiment
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-5 pt-6 sm:grid-cols-2">
           {/* Experiment Number */}
           <div className="space-y-2">
             <Label htmlFor="expNo" className="text-zinc-300">
