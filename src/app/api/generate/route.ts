@@ -70,19 +70,26 @@ Return JSON: { "type": "dbms", "theory": "...", "syntax": "..." }`,
   ];
 }
 
-// Build messages array based on subject type (original full mode)
+// Build messages array based on subject type
 function buildMessages(
   aim: string,
   subject: string,
-  name: string,
-  rollNo: string
+  name?: string,
+  rollNo?: string
 ): { role: "system" | "user"; content: string }[] {
+  const hasIdentity = name && rollNo;
+
+  const identityInstruction = hasIdentity
+    ? `1. Code: Start with comments '-- Name: ${name} | Roll: ${rollNo}'\n2. Output: First line must be '-- Name: ${name} | Roll: ${rollNo}'`
+    : `1. Code: Do NOT include any Name/Roll No comments at the top.\n2. Output: Do NOT include Name/Roll No in the output.`;
+
   if (isDBMSSubject(subject)) {
     // Scenario A: DBMS/SQL
     return [
       {
         role: "system",
-        content: "You are a DBMS Lab Assistant. Return strict JSON only. Write clean code with minimal comments - only add comments where absolutely necessary.",
+        content:
+          "You are a DBMS Lab Assistant. Return strict JSON only. Write clean code with minimal comments - only add comments where absolutely necessary.",
       },
       {
         role: "user",
@@ -90,18 +97,15 @@ function buildMessages(
 
 Strict Constraints:
 
-**Code:** Write the SQL query with minimal comments. The very first TWO lines MUST be comments:
--- Name: ${name}
--- Enrollment No.: ${rollNo}
+**Identity:**
+${identityInstruction}
 
-**Output:** The output_text MUST start with these two lines:
-Name: ${name}
-Enrollment No.: ${rollNo}
-Then show the query result using strict ASCII table formatting (using +, -, |) to look exactly like MariaDB/MySQL.
+**Output:** 
+Show the query result using strict ASCII table formatting (using +, -, |) to look exactly like MariaDB/MySQL.
 
 **Theory/Syntax:** Provide a short theory (2 lines) and the generic syntax for the command.
 
-Return JSON: { "type": "dbms", "theory": "...", "syntax": "...", "code": "-- Name: ${name}\\n-- Enrollment No.: ${rollNo}\\n...", "output_text": "Name: ${name}\\nEnrollment No.: ${rollNo}\\n\\n+---...---+\\n..." }`,
+Return JSON: { "type": "dbms", "theory": "...", "syntax": "...", "code": "...", "output_text": "..." }`,
       },
     ];
   } else {
@@ -114,14 +118,21 @@ Return JSON: { "type": "dbms", "theory": "...", "syntax": "...", "code": "-- Nam
     };
 
     const subjectLower = subject.toLowerCase();
-    const printExample =
-      printExamples[subjectLower] ||
-      `print("Name: ${name}")\\nprint("Enrollment No.: ${rollNo}")`;
+    
+    // Only use print example if we have identity
+    const printExample = hasIdentity
+      ? (printExamples[subjectLower] || `print("Name: ${name}")\\nprint("Enrollment No.: ${rollNo}")`)
+      : "No identity print needed.";
+
+    const codingIdentityInstruction = hasIdentity
+        ? `1. Code: The FIRST TWO executable lines in main() or the entry point MUST print:\n   Line 1: "Name: ${name}"\n   Line 2: "Enrollment No.: ${rollNo}"\n   Example: ${printExample}\n2. Output: The VERY FIRST TWO LINES of output MUST be exactly:\n   Name: ${name}\n   Enrollment No.: ${rollNo}`
+        : `1. Code: Do NOT print Name or Enrollment No.\n2. Output: Do NOT include Name or Enrollment No.`;
 
     return [
       {
         role: "system",
-        content: "You are a Coding Lab Assistant. Return strict JSON only. Write clean, efficient code with minimal comments - only add comments where absolutely necessary for understanding.",
+        content:
+          "You are a Coding Lab Assistant. Return strict JSON only. Write clean, efficient code with minimal comments - only add comments where absolutely necessary for understanding.",
       },
       {
         role: "user",
@@ -129,17 +140,13 @@ Return JSON: { "type": "dbms", "theory": "...", "syntax": "...", "code": "-- Nam
 
 Strict Constraints:
 
-**Code:** Write clean code with VERY FEW comments (only essential ones). The FIRST TWO executable lines in main() or the entry point MUST print:
-Line 1: "Name: ${name}"
-Line 2: "Enrollment No.: ${rollNo}"
-Example for ${subject}: ${printExample}
+**Identity:**
+${codingIdentityInstruction}
 
-**Output:** Generate a realistic terminal session output. The VERY FIRST TWO LINES of output MUST be exactly:
-Name: ${name}
-Enrollment No.: ${rollNo}
-Then show the rest of the program output below it.
+**Output:** 
+Show the rest of the program output below it.
 
-Return JSON: { "type": "coding", "code": "...", "output_text": "Name: ${name}\\nEnrollment No.: ${rollNo}\\n..." }`,
+Return JSON: { "type": "coding", "code": "...", "output_text": "..." }`,
       },
     ];
   }
@@ -244,11 +251,12 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Full mode: validate all required fields
-      if (!aim || !subject || !name || !rollNo) {
+      // Name and RollNo are now OPTIONAL
+      if (!aim || !subject) {
         return NextResponse.json(
           {
             error: "Missing required fields",
-            required: ["aim", "subject", "name", "rollNo"],
+            required: ["aim", "subject"],
           },
           { status: 400 }
         );
