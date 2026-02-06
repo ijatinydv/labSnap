@@ -194,16 +194,16 @@ export default function Home() {
                       <FileDown className="h-7 w-7 text-white" />
                     </div>
                     <CardTitle className="text-xl text-white transition-colors group-hover:text-amber-300">
-                      DOCX Generator
+                      Smart Formatter
                     </CardTitle>
                     <CardDescription className="text-base text-zinc-400">
-                      Upload your code & screenshot. Get a print-ready Word document.
+                      Have your own code? Paste it here along with screenshots, and we will format it into a perfect Lab Record for you.
                     </CardDescription>
                   </CardHeader>
 
                   <CardContent className="relative">
                     <div className="flex items-center gap-2 text-sm text-amber-400">
-                      <span className="font-medium">Format Your Lab</span>
+                      <span className="font-medium">Use Smart Formatter</span>
                       <span className="transition-transform duration-200 group-hover:translate-x-1">
                         →
                       </span>

@@ -203,11 +203,10 @@ export default function FormatPage() {
             Smart Formatter
           </div>
           <h1 className="mb-3 bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl">
-            Format Your Lab Record
+            Smart Formatter
           </h1>
           <p className="mx-auto max-w-md text-lg text-zinc-400">
-            Upload your code and screenshot. We&apos;ll format it into a
-            print-ready Word document.
+            Manual Entry Mode: Paste your existing code and upload output screenshots. We'll handle the margins, fonts, and layout.
           </p>
         </div>
 

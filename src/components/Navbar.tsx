@@ -22,6 +22,16 @@ export function Navbar() {
           </span>
         </Link>
 
+        {/* Center: Navigation Links */}
+        <nav className="hidden md:flex items-center gap-6">
+          <Link
+            href="/format"
+            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+          >
+            Smart Formatter
+          </Link>
+        </nav>
+
         {/* Right Side: GitHub + Auth */}
         <div className="flex items-center gap-3">
           {/* GitHub Link */}
