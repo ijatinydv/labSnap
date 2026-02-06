@@ -114,12 +114,12 @@ export default function GeneratePage() {
 
       // Prepare data with EDITED content
       const labData: LabData = {
-        expNo: formData.expNo,
-        date: formData.date,
+        expNo: formData.expNo || "",
+        date: formData.date || "",
         aim: formData.aim,
         subject: formData.subject,
-        name: formData.name,
-        rollNo: formData.rollNo,
+        name: formData.name || "",
+        rollNo: formData.rollNo || "",
         theory: result.type === "dbms" ? editableTheory : undefined,
         syntax: result.type === "dbms" ? editableSyntax : undefined,
         code: editableCode,
