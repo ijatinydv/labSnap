@@ -78,7 +78,7 @@ export default function Home() {
                 className="group inline-flex items-center gap-2 rounded-xl border border-amber-600/50 bg-amber-950/30 px-8 py-4 text-lg font-semibold text-amber-300 backdrop-blur-sm transition-all hover:border-amber-500 hover:bg-amber-900/40 hover:text-amber-200"
               >
                 <FileDown className="h-5 w-5" />
-                DOCX Generator
+                Smart Formatter
                 <ArrowRight className="h-5 w-5 opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100" />
               </Link>
 
