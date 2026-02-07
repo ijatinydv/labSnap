@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
         create: {
           clerkId: userId,
           email: `${userId}@clerk.user`,
-          credits: 10, // New users get 10 credits
+          credits: 20, // New users get 20 credits
         },
       });
 
@@ -218,9 +218,9 @@ export async function POST(request: NextRequest) {
         where: { ip: clientIP },
       });
 
-      if (guestUsage && guestUsage.count >= 2) {
+      if (guestUsage && guestUsage.count >= 5) {
         return NextResponse.json(
-          { error: "Guest limit reached. Login to get 10 credits!" },
+          { error: "Guest limit reached. Login to get 20 credits!" },
           { status: 403 }
         );
       }
