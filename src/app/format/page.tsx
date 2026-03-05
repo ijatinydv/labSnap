@@ -4,6 +4,7 @@ import { useState, useRef, ChangeEvent } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { generateLabRecord, LabData } from "@/lib/generateDoc";
+import { generateLabPdf } from "@/lib/generatePdf";
 import {
   Loader2,
   FileDown,
@@ -15,6 +16,7 @@ import {
   Code,
   Target,
   User,
+  FileType,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +78,7 @@ export default function FormatPage() {
 
   // Loading and error state
   const [loading, setLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Handle form field changes
@@ -188,6 +191,68 @@ export default function FormatPage() {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle PDF download
+  const handlePdfSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPdfLoading(true);
+    setError(null);
+
+    try {
+      if (!formData.aim || !formData.subject || !formData.code) {
+        throw new Error("Please fill in Aim, Subject, and Code");
+      }
+
+      if (!screenshotBlob) {
+        throw new Error("Please upload a screenshot");
+      }
+
+      let theory: string | undefined;
+      let syntax: string | undefined;
+
+      if (isDBMSSubject(formData.subject)) {
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            aim: formData.aim,
+            subject: formData.subject,
+            mode: "theory_only",
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to generate theory");
+        }
+
+        const aiResult = await response.json();
+        theory = aiResult.theory;
+        syntax = aiResult.syntax;
+      }
+
+      const labData: LabData = {
+        expNo: formData.expNo,
+        date: formData.date,
+        aim: formData.aim,
+        subject: formData.subject,
+        name: formData.name,
+        rollNo: formData.rollNo,
+        theory,
+        syntax,
+        code: formData.code,
+        screenshotBlob,
+      };
+
+      await generateLabPdf(labData);
+
+      alert("✅ PDF generated and downloaded successfully!");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -429,26 +494,48 @@ export default function FormatPage() {
             </CardContent>
           </Card>
 
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 py-6 text-base font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/40 disabled:opacity-50"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                {isDBMSSubject(formData.subject)
-                  ? "Generating Theory & Document..."
-                  : "Generating Document..."}
-              </>
-            ) : (
-              <>
-                <FileDown className="mr-2 h-5 w-5" />
-                Generate & Download DOCX
-              </>
-            )}
-          </Button>
+          {/* Submit Buttons */}
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 py-6 text-base font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all duration-300 hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/40 disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  {isDBMSSubject(formData.subject)
+                    ? "Generating Theory & Document..."
+                    : "Generating Document..."}
+                </>
+              ) : (
+                <>
+                  <FileDown className="mr-2 h-5 w-5" />
+                  Download DOCX
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              onClick={handlePdfSubmit}
+              disabled={pdfLoading}
+              className="flex-1 bg-gradient-to-r from-rose-600 to-pink-600 py-6 text-base font-semibold text-white shadow-lg shadow-rose-500/25 transition-all duration-300 hover:from-rose-500 hover:to-pink-500 hover:shadow-rose-500/40 disabled:opacity-50"
+            >
+              {pdfLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  {isDBMSSubject(formData.subject)
+                    ? "Generating Theory & PDF..."
+                    : "Generating PDF..."}
+                </>
+              ) : (
+                <>
+                  <FileType className="mr-2 h-5 w-5" />
+                  Download PDF
+                </>
+              )}
+            </Button>
+          </div>
         </form>
       </main>
 

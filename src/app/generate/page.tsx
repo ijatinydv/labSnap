@@ -8,7 +8,8 @@ import { Footer } from "@/components/Footer";
 import { LabForm, LabFormData } from "@/components/LabForm";
 import { FakeTerminal } from "@/components/FakeTerminal";
 import { generateLabRecord, LabData } from "@/lib/generateDoc";
-import { Loader2, FileDown, ArrowLeft, Sparkles, Save } from "lucide-react";
+import { generateLabPdf } from "@/lib/generatePdf";
+import { Loader2, FileDown, ArrowLeft, Sparkles, Save, FileType } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,7 @@ export default function GeneratePage() {
 
   // State management
   const [loading, setLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<APIResult | null>(null);
   const [formData, setFormData] = useState<LabFormData | null>(null);
@@ -131,6 +133,50 @@ export default function GeneratePage() {
       setError(err instanceof Error ? err.message : "Failed to generate document");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Step 4b: Handle PDF download
+  const handleDownloadPdf = async () => {
+    if (!result || !formData) return;
+
+    setPdfLoading(true);
+
+    try {
+      const terminalElement = document.getElementById("terminal-preview");
+      let screenshotBlob: Blob | null = null;
+
+      if (terminalElement) {
+        try {
+          screenshotBlob = await toBlob(terminalElement, {
+            backgroundColor: "#ffffff",
+            quality: 0.95,
+            pixelRatio: 2,
+          });
+        } catch (captureError) {
+          console.error("Screenshot capture failed:", captureError);
+          alert("Failed to capture output screenshot. The PDF will be generated without it.");
+        }
+      }
+
+      const labData: LabData = {
+        expNo: formData.expNo || "",
+        date: formData.date || "",
+        aim: formData.aim,
+        subject: formData.subject,
+        name: formData.name || "",
+        rollNo: formData.rollNo || "",
+        theory: result.type === "dbms" ? editableTheory : undefined,
+        syntax: result.type === "dbms" ? editableSyntax : undefined,
+        code: editableCode,
+        screenshotBlob,
+      };
+
+      await generateLabPdf(labData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate PDF");
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -244,7 +290,19 @@ export default function GeneratePage() {
                   ) : (
                     <FileDown className="mr-2 h-4 w-4" />
                   )}
-                  Download Word File
+                  Download DOCX
+                </Button>
+                <Button
+                  onClick={handleDownloadPdf}
+                  disabled={pdfLoading}
+                  className="bg-gradient-to-r from-rose-600 to-pink-600 text-white hover:from-rose-500 hover:to-pink-500"
+                >
+                  {pdfLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileType className="mr-2 h-4 w-4" />
+                  )}
+                  Download PDF
                 </Button>
               </div>
             </div>

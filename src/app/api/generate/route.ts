@@ -169,6 +169,67 @@ function cleanResponse(text: string): string {
   return cleaned.trim();
 }
 
+// Extract the first complete JSON object from free-form text
+function extractFirstJsonObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let isEscaped = false;
+
+  for (let index = start; index < text.length; index++) {
+    const char = text[index];
+
+    if (inString) {
+      if (isEscaped) {
+        isEscaped = false;
+      } else if (char === "\\") {
+        isEscaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(start, index + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseGenerateResponse(content: string): GenerateResponse {
+  const cleaned = cleanResponse(content);
+
+  const candidates: string[] = [cleaned];
+  const extractedFromCleaned = extractFirstJsonObject(cleaned);
+  if (extractedFromCleaned) candidates.push(extractedFromCleaned);
+  const extractedFromRaw = extractFirstJsonObject(content);
+  if (extractedFromRaw) candidates.push(extractedFromRaw);
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate) as GenerateResponse;
+    } catch {
+      // Try next candidate
+    }
+  }
+
+  throw new SyntaxError("Failed to parse model JSON response");
+}
+
 // Get client IP from request headers
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -276,30 +337,41 @@ export async function POST(request: NextRequest) {
       ? buildTheoryOnlyMessages(aim, subject)
       : buildMessages(aim, subject, name, rollNo);
 
-    // Call MiMo-V2-Flash via Novita AI
-    const response = await openai.chat.completions.create({
-      model: "xiaomimimo/mimo-v2-flash",
-      messages: messages,
-      response_format: { type: "json_object" },
-      max_tokens: mode === "theory_only" ? 500 : 1000,
-      temperature: 0.7,
-    });
+    const maxAttempts = 2;
+    let lastContent = "";
 
-    // Extract and parse the response
-    const content = response.choices[0]?.message?.content;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const response = await openai.chat.completions.create({
+        model: "xiaomimimo/mimo-v2-flash",
+        messages,
+        response_format: { type: "json_object" },
+        max_tokens: mode === "theory_only" ? 700 : 1600,
+        temperature: attempt === 1 ? 0.7 : 0.2,
+      });
 
-    if (!content) {
-      return NextResponse.json(
-        { error: "No content returned from AI" },
-        { status: 500 }
-      );
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        continue;
+      }
+
+      lastContent = content;
+
+      try {
+        const parsedResponse = parseGenerateResponse(content);
+        return NextResponse.json(parsedResponse);
+      } catch (parseError) {
+        console.warn(`AI JSON parse failed (attempt ${attempt}/${maxAttempts})`, parseError);
+      }
     }
 
-    // Clean and parse the response
-    const cleanedContent = cleanResponse(content);
-    const parsedResponse: GenerateResponse = JSON.parse(cleanedContent);
+    console.error("Unable to parse AI JSON response after retries", {
+      preview: lastContent.slice(0, 300),
+    });
 
-    return NextResponse.json(parsedResponse);
+    return NextResponse.json(
+      { error: "Failed to parse AI response as JSON" },
+      { status: 502 }
+    );
   } catch (error) {
     console.error("Error generating content:", error);
 
