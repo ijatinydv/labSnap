@@ -276,9 +276,9 @@ export async function POST(request: NextRequest) {
       ? buildTheoryOnlyMessages(aim, subject)
       : buildMessages(aim, subject, name, rollNo);
 
-    // Call MiMo-V2-Flash via Novita AI
+    // Call MiMo v2.6 Flash via Novita AI
     const response = await openai.chat.completions.create({
-      model: "xiaomimimo/mimo-v2-flash",
+      model: "xiaomimimo/mimo-v2.6-flash",
       messages: messages,
       response_format: { type: "json_object" },
       max_tokens: mode === "theory_only" ? 500 : 1000,

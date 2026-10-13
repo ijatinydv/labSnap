@@ -42,7 +42,7 @@
 - **Styling:** [Tailwind CSS 4](https://tailwindcss.com/)
 - **Database:** [MongoDB](https://www.mongodb.com/) with [Prisma ORM](https://www.prisma.io/)
 - **Authentication:** [Clerk](https://clerk.com/)
-- **AI Provider:** [Novita AI](https://novita.ai/) (MiMo-V2-Flash model)
+- **AI Provider:** [Novita AI](https://novita.ai/) (`xiaomimimo/mimo-v2.6-flash` model)
 - **Document Generation:** [docx](https://www.npmjs.com/package/docx) library
 - **UI Components:** [Radix UI](https://www.radix-ui.com/) + [Lucide Icons](https://lucide.dev/)
 
@@ -198,6 +198,13 @@ Generate lab record content using AI.
   "output_text": "// Console output here..."
 }
 ```
+
+### API Access Guide
+
+- **Base URL (OpenAI-compatible):** `https://api.novita.ai/openai`
+- **Base URL (Anthropic-compatible):** `https://api.novita.ai/anthropic`
+- **API Endpoint:** `chat/completions`, `responses`
+- **Model ID:** `xiaomimimo/mimo-v2.6-flash`
 
 ## 🔐 Authentication
 
