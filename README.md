@@ -113,6 +113,9 @@ labsnap/
 
    # AI Provider
    NOVITA_API_KEY=your_novita_api_key
+   NOVITA_MODEL=xiaomimimo/mimo-v2.6-flash
+   # Optional comma-separated fallback models
+   NOVITA_FALLBACK_MODELS=
    ```
 
 4. **Generate Prisma client**
@@ -204,7 +207,8 @@ Generate lab record content using AI.
 - **Base URL (OpenAI-compatible):** `https://api.novita.ai/openai`
 - **Base URL (Anthropic-compatible):** `https://api.novita.ai/anthropic`
 - **API Endpoint:** `chat/completions`, `responses`
-- **Model ID:** `xiaomimimo/mimo-v2.6-flash`
+- **Model ID:** Controlled by `NOVITA_MODEL` (default: `xiaomimimo/mimo-v2.6-flash`)
+- **Fallback models (optional):** `NOVITA_FALLBACK_MODELS` (comma-separated)
 
 ## 🔐 Authentication
 

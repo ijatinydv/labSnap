@@ -9,6 +9,8 @@ const openai = new OpenAI({
   apiKey: process.env.NOVITA_API_KEY || "",
 });
 
+const DEFAULT_NOVITA_MODEL = "xiaomimimo/mimo-v2.6-flash";
+
 interface GenerateRequest {
   aim: string;
   subject: string;
@@ -38,6 +40,47 @@ interface CodingResponse {
 }
 
 type GenerateResponse = DBMSResponse | CodingResponse | TheoryOnlyResponse;
+
+type UsageContext =
+  | { type: "user"; clerkId: string }
+  | { type: "guest"; ip: string };
+
+function getCandidateModels(): string[] {
+  const primary = process.env.NOVITA_MODEL?.trim() || DEFAULT_NOVITA_MODEL;
+  const fallback = (process.env.NOVITA_FALLBACK_MODELS || "")
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean);
+
+  return [...new Set([primary, ...fallback])];
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (error && typeof error === "object" && "status" in error) {
+    const status = (error as { status?: unknown }).status;
+    if (typeof status === "number") return status;
+  }
+  return undefined;
+}
+
+function getErrorTraceId(error: unknown): string | undefined {
+  if (!error || typeof error !== "object" || !("headers" in error)) {
+    return undefined;
+  }
+
+  const headers = (error as { headers?: unknown }).headers;
+  if (
+    headers &&
+    typeof headers === "object" &&
+    "get" in headers &&
+    typeof (headers as { get?: unknown }).get === "function"
+  ) {
+    const traceId = (headers as Headers).get("x-trace-id");
+    return traceId || undefined;
+  }
+
+  return undefined;
+}
 
 // Helper to determine if subject is DBMS/SQL related
 function isDBMSSubject(subject: string): boolean {
@@ -180,6 +223,8 @@ function getClientIP(request: NextRequest): string {
 
 export async function POST(request: NextRequest) {
   try {
+    let usageContext: UsageContext | null = null;
+
     // === HYBRID AUTH: Check if user is logged in ===
     const { userId } = await auth();
 
@@ -203,12 +248,7 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         );
       }
-
-      // Deduct 1 credit immediately
-      await db.user.update({
-        where: { clerkId: userId },
-        data: { credits: { decrement: 1 } },
-      });
+      usageContext = { type: "user", clerkId: userId };
     } else {
       // === GUEST USER FLOW ===
       const clientIP = getClientIP(request);
@@ -224,13 +264,7 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         );
       }
-
-      // Increment guest usage count
-      await db.guestUsage.upsert({
-        where: { ip: clientIP },
-        update: { count: { increment: 1 } },
-        create: { ip: clientIP, count: 1 },
-      });
+      usageContext = { type: "guest", ip: clientIP };
     }
 
     // === CONTINUE WITH GENERATION ===
@@ -276,17 +310,37 @@ export async function POST(request: NextRequest) {
       ? buildTheoryOnlyMessages(aim, subject)
       : buildMessages(aim, subject, name, rollNo);
 
-    // Call MiMo v2.6 Flash via Novita AI
-    const response = await openai.chat.completions.create({
-      model: "xiaomimimo/mimo-v2.6-flash",
-      messages: messages,
-      response_format: { type: "json_object" },
-      max_tokens: mode === "theory_only" ? 500 : 1000,
-      temperature: 0.7,
-    });
+    // Call Novita AI with configured model and optional fallbacks
+    const candidateModels = getCandidateModels();
+    let content: string | null | undefined;
+    let lastModelError: unknown;
 
-    // Extract and parse the response
-    const content = response.choices[0]?.message?.content;
+    for (const model of candidateModels) {
+      try {
+        const response = await openai.chat.completions.create({
+          model,
+          messages: messages,
+          response_format: { type: "json_object" },
+          max_tokens: mode === "theory_only" ? 500 : 1000,
+          temperature: 0.7,
+        });
+        content = response.choices[0]?.message?.content;
+        if (content) break;
+      } catch (error) {
+        lastModelError = error;
+        const status = getErrorStatus(error);
+
+        if ((status === 401 || status === 403 || status === 404) && candidateModels.length > 1) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    if (!content && lastModelError) {
+      throw lastModelError;
+    }
 
     if (!content) {
       return NextResponse.json(
@@ -299,6 +353,20 @@ export async function POST(request: NextRequest) {
     const cleanedContent = cleanResponse(content);
     const parsedResponse: GenerateResponse = JSON.parse(cleanedContent);
 
+    // Charge usage only after successful generation
+    if (usageContext?.type === "user") {
+      await db.user.update({
+        where: { clerkId: usageContext.clerkId },
+        data: { credits: { decrement: 1 } },
+      });
+    } else if (usageContext?.type === "guest") {
+      await db.guestUsage.upsert({
+        where: { ip: usageContext.ip },
+        update: { count: { increment: 1 } },
+        create: { ip: usageContext.ip, count: 1 },
+      });
+    }
+
     return NextResponse.json(parsedResponse);
   } catch (error) {
     console.error("Error generating content:", error);
@@ -307,6 +375,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Failed to parse AI response as JSON" },
         { status: 500 }
+      );
+    }
+
+    const status = getErrorStatus(error);
+    if (status === 403 || status === 401) {
+      const traceId = getErrorTraceId(error);
+      return NextResponse.json(
+        {
+          error:
+            "AI provider rejected the request. Verify NOVITA_API_KEY, model access, and provider credits/quota.",
+          providerStatus: status,
+          traceId,
+        },
+        { status: 502 }
       );
     }
 
